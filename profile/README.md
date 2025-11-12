@@ -2,40 +2,41 @@
 
 > **Engineering Clarity into Every Line of Code.**
 
-**Daffathan Labs** adalah studio pengembangan perangkat lunak independen yang berfokus pada membangun sistem modern, efisien, dan cerdas untuk bisnis digital dan startup.  
-Kami menggabungkan **rekayasa perangkat lunak**, **AI**, dan **konsultasi IT** untuk membantu ide berkembang menjadi solusi nyata.
+**Daffathan Labs** is an independent software engineering studio focused on building modern, efficient, and intelligent systems for digital businesses and startups.  
+We combine **software engineering**, **AI**, and **IT consulting** to transform ideas into real, scalable solutions.
 
 ---
 
-## 🚀 Apa Itu Daffathan Labs?
+## 🚀 What Is Daffathan Labs?
 
-Daffathan Labs merupakan inisiatif yang lahir dari semangat untuk menggabungkan **praktik engineering industri**, **teknologi modern**, dan **AI-driven development** ke dalam satu ekosistem.  
-Kami membangun dan merancang produk digital yang fokus pada:
+Daffathan Labs was founded from the drive to merge **industry-grade engineering practices**, **modern technology**, and **AI-driven development** into one ecosystem.  
+We build and design digital products that emphasize:
 
-- **Kecepatan & Skalabilitas**  
-  Arsitektur sistem yang siap berkembang tanpa mengorbankan performa.
-  
-- **Kejelasan & Efisiensi**  
-  Kode yang bersih, terukur, dan mudah dirawat.
+- **Speed & Scalability**  
+  Architectures designed to grow without sacrificing performance.
 
-- **Kecerdasan Buatan (AI)**  
-  Integrasi AI untuk otomasi, rekomendasi layanan, dan sistem konsultasi cerdas.
+- **Clarity & Efficiency**  
+  Clean, maintainable, and predictable codebases.
+
+- **Artificial Intelligence (AI)**  
+  AI integration for automation, service recommendations, and intelligent consultation systems.
 
 ---
 
-## 💼 Fokus Utama Kami
+## 💼 Our Core Focus
 
-### ⚙️ Software Engineering
-Membangun sistem dan aplikasi modern berbasis web untuk kebutuhan bisnis dan profesional.  
-Mulai dari landing page, dashboard bisnis, sampai integrasi sistem API dan AI.
+### ⚙️ Software Engineering  
+We build modern web-based systems and applications for business and professional use —  
+from landing pages and internal dashboards to API and AI-integrated systems.
 
-### 🧭 IT Consulting
-Memberikan panduan teknis, audit sistem, dan mentoring bagi bisnis yang ingin naik level secara digital.  
-Kami bantu memilih teknologi yang tepat, aman, dan efisien untuk kebutuhan Anda.
+### 🧭 IT Consulting  
+We provide technical direction, system audits, and mentorship for businesses looking to scale digitally.  
+Our goal is to help you choose the right, secure, and efficient technology stack.
 
-### ☁️ DevOps & Deployment
-Menyiapkan sistem agar bisa live dengan cepat dan stabil.  
-Mulai dari setup server, CI/CD, hingga monitoring & konfigurasi environment.
+### ☁️ DevOps & Deployment  
+We set up infrastructure that’s easy to launch and maintain.  
+From server configurations, CI/CD pipelines, to monitoring and environment setup —  
+we make sure your system is always live and stable.
 
 ---
 
@@ -43,57 +44,57 @@ Mulai dari setup server, CI/CD, hingga monitoring & konfigurasi environment.
 
 > _"Your intelligent project advisor at Daffathan Labs."_
 
-**Davinci** adalah asisten AI internal kami yang membantu calon klien menemukan layanan yang sesuai.  
-Cukup ketik kebutuhan Anda — misalnya:
-> “Saya butuh sistem presensi dengan dashboard dan login user.”
+**Davinci** is our internal AI assistant that helps clients discover the right services for their needs.  
+Simply type what you need — for example:  
+> “I need an attendance system with a dashboard and login feature.”
 
-Maka Davinci akan menganalisis kebutuhan, merekomendasikan layanan dari price list kami, dan memberi estimasi harga secara otomatis.
+Davinci will analyze your request, match it to available services from our pricelist, and estimate a suitable price range.
 
-🧩 Davinci akan menjadi bagian dari sistem kami untuk:
-- Rekomendasi layanan otomatis  
-- Integrasi AI pada sistem klien  
-- Konsultasi teknologi berbasis percakapan  
-
----
-
-## 🌐 Ekosistem Daffathan Labs
-
-Daffathan Labs terdiri dari tiga pilar utama:
-
-- 🧱 **Core Backend (Golang)** – menangani data, logic, dan integrasi layanan  
-- 🤖 **Davinci AI Service (Python)** – sistem AI yang memahami kebutuhan pengguna  
-- 💻 **Frontend Platform (Next.js)** – tampilan modern dan interaktif untuk publik dan klien  
-
-Setiap bagian dikembangkan secara terpisah untuk skalabilitas dan efisiensi maksimal.  
-Semuanya saling terhubung membentuk satu ekosistem produk digital yang utuh.
+🧩 Davinci is designed to:
+- Recommend the most relevant services automatically  
+- Integrate AI into client systems  
+- Provide conversational technical consulting  
 
 ---
 
-## 💡 Filosofi Kami
+## 🌐 The Daffathan Labs Ecosystem
+
+Daffathan Labs consists of three main pillars:
+
+- 🧱 **Core Backend (Golang)** – Handles data, business logic, and system integrations  
+- 🤖 **Davinci AI Service (Python)** – An intelligent layer that understands user needs and context  
+- 💻 **Frontend Platform (Next.js)** – A modern, responsive interface for users and clients  
+
+Each module is developed independently for scalability and maintainability.  
+Together, they form a complete, AI-driven digital ecosystem.
+
+---
+
+## 💡 Our Philosophy
 
 > “Simplicity builds clarity, and clarity builds reliability.”
 
-Kami percaya bahwa software bukan sekadar kode — tapi cara berpikir yang menciptakan kejelasan.  
-Itulah kenapa setiap sistem di Daffathan Labs dibangun dengan:
-- Struktur yang sederhana tapi scalable  
-- Desain yang ringan tapi elegan  
-- Teknologi yang efisien tapi powerful  
+We believe that great software isn’t just about code — it’s about **how you think when you write it**.  
+Every system at Daffathan Labs is built with these core principles:
+- Simple yet scalable structure  
+- Lightweight yet elegant design  
+- Efficient yet powerful technology choices  
 
 ---
 
-## 🧑‍💻 Tentang Pendiri
+## 🧑‍💻 About the Founder
 
 **Daffa** — Software Engineer & IT Consultant  
-Berpengalaman dalam rekayasa perangkat lunak, arsitektur sistem, dan pengembangan AI.  
-Fokus membangun solusi nyata yang bisa diimplementasikan langsung di dunia industri.
+With years of experience in software engineering, system architecture, and AI development,  
+he focuses on delivering practical, industry-ready solutions that merge speed and clarity.
 
 > _“Code it clean. Ship it fast. Scale it smart.”_
 
 ---
 
-## 📫 Hubungi Kami
+## 📫 Contact Us
 
-| Media | Link |
+| Platform | Link |
 |:--|:--|
 | 🌐 Website | [daffathanlabs.com](https://daffathanlabs.com) _(coming soon)_ |
 | 💌 Email | daffa.fathan9@gmail.com |
@@ -102,7 +103,7 @@ Fokus membangun solusi nyata yang bisa diimplementasikan langsung di dunia indus
 
 ---
 
-## 🧩 Status
+## 🧩 Project Status
 
 📦 **Current Phase:** Internal Development  
 💬 **Davinci AI:** Private Alpha  
@@ -113,7 +114,7 @@ Fokus membangun solusi nyata yang bisa diimplementasikan langsung di dunia indus
 ## 🏁 License
 
 Projects under **Daffathan Labs** may have different licenses per repository.  
-Unless otherwise stated, codebases are distributed under the **MIT License**.
+Unless otherwise stated, all codebases are released under the **MIT License**.
 
 ---
 
