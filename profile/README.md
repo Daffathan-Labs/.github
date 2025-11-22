@@ -96,7 +96,7 @@ he focuses on delivering practical, industry-ready solutions that merge speed an
 
 | Platform | Link |
 |:--|:--|
-| 🌐 Website | [daffathanlabs.com](https://daffathanlabs.com) _(coming soon)_ |
+| 🌐 Website | [daffathan-labs.my.id](https://daffathan-labs.my.id) _(coming soon)_ |
 | 💌 Email | daffa.fathan9@gmail.com |
 | 💼 LinkedIn | [linkedin.com/in/daffa-fathan](https://www.linkedin.com/in/daffa-fathan/) |
 | 🐙 GitHub | [github.com/daffathan-labs](https://github.com/daffathan-labs) |
