@@ -5,7 +5,8 @@
 #                    commit itu, jadi kode lama gak bikin semua repo merah sekaligus.
 # Mode `full` (dipanggil dari jadwal mingguan) scan semua kode + bikin SBOM CycloneDX.
 # Pengecualian yang disengaja ditaruh di `.trivyignore` / `.semgrepignore` repo masing-masing,
-# lengkap dengan alasannya.
+# lengkap dengan alasannya. Trivy jalan dengan workdir = root repo, jadi `.trivyignore`
+# kebaca otomatis kalau ada, dan gak bikin error kalau gak ada.
 name: security
 
 on:
@@ -44,16 +45,15 @@ jobs:
       - name: 🧬 Trivy fs (dependency)
         if: ${{ !cancelled() }}
         run: |
-          docker run --rm -v "$PWD:/src" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+          docker run --rm -v "$PWD:/src" -w /src -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
             fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress \
-            --skip-dirs node_modules,venv,.venv --ignorefile /src/.trivyignore /src
+            --skip-dirs node_modules,venv,.venv .
 
       - name: 🐳 Trivy config (Dockerfile/compose)
         if: ${{ !cancelled() }}
         run: |
-          docker run --rm -v "$PWD:/src" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
-            config --severity HIGH,CRITICAL --exit-code 1 --ignorefile /src/.trivyignore \
-            --skip-dirs node_modules,venv,.venv /src
+          docker run --rm -v "$PWD:/src" -w /src -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs node_modules,venv,.venv .
 
       - name: 🔬 Semgrep (SAST)
         if: ${{ !cancelled() }}

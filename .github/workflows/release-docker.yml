@@ -2,13 +2,29 @@
 # Cuma dipanggil dari push tag `v*` atau workflow_dispatch, bukan dari setiap push.
 # Image di-scan SEBELUM di-push, jadi image yang ketahuan rentan gak pernah sampai registry.
 #
-# Pemanggil wajib: `secrets: inherit` dan `permissions: contents: write` (buat Release).
-# Secret yang dipakai: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, dan untuk deploy
-# SERVER_HOST, SERVER_USER, SERVER_KEY, SERVER_KNOWN_HOSTS (`ssh-keyscan <host>`).
+# Pemanggil wajib kasih `permissions: contents: write` (buat Release) dan meneruskan
+# secret satu-satu (BUKAN `secrets: inherit` — workflow ini cuma dapat yang dia butuh).
 name: release-docker
 
 on:
   workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      SERVER_HOST:
+        required: false
+      SERVER_USER:
+        required: false
+      SERVER_KEY:
+        required: false
+      SERVER_KNOWN_HOSTS:
+        description: Keluaran `ssh-keyscan <host>`; host key server selalu dicek.
+        required: false
+      BUILD_ARGS:
+        description: Baris KEY=VALUE build-arg yang nilainya rahasia (mis. NEXT_PUBLIC_API_URL).
+        required: false
     inputs:
       image:
         description: Nama image Docker Hub, mis. daffa09/vinci-diary-api
@@ -23,10 +39,6 @@ on:
         default: .
       build-args:
         description: Baris KEY=VALUE biasa (bukan rahasia).
-        type: string
-        default: ''
-      build-arg-secrets:
-        description: Nama secret (satu per baris) yang diteruskan sebagai build-arg dengan nama yang sama.
         type: string
         default: ''
       trivy-severity:
@@ -77,20 +89,15 @@ jobs:
         id: args
         env:
           PLAIN: ${{ inputs.build-args }}
-          NAMES: ${{ inputs.build-arg-secrets }}
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+          SECRET_ARGS: ${{ secrets.BUILD_ARGS }}
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
           {
             echo 'list<<__ARGS__'
             echo "VERSION=$VERSION"
-            [ -n "$PLAIN" ] && printf '%s\n' "$PLAIN"
-            for n in $NAMES; do
-              val=$(jq -r --arg n "$n" '.[$n] // empty' <<<"$ALL_SECRETS")
-              [ -z "$val" ] && { echo "::error::Secret $n kosong/tidak ada"; exit 1; }
-              echo "$n=$val"
-            done
+            if [ -n "$PLAIN" ]; then printf '%s\n' "$PLAIN"; fi
+            if [ -n "$SECRET_ARGS" ]; then printf '%s\n' "$SECRET_ARGS"; fi
             echo '__ARGS__'
           } >> "$GITHUB_OUTPUT"
 

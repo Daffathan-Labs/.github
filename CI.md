@@ -32,3 +32,4 @@ Deploy: `git tag v2.0.37 && git push origin v2.0.37`.
 ## Secrets (repo or org)
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `SERVER_HOST`, `SERVER_USER`, `SERVER_KEY`,
 `SERVER_KNOWN_HOSTS` (the output of `ssh-keyscan <host>`; the SSH host key is always checked).
+The caller passes them one by one under `secrets:` (not `secrets: inherit`). Secret build-args go through `BUILD_ARGS` (KEY=VALUE lines).
