@@ -1,0 +1,180 @@
+# Rilis: build image → Trivy scan image → push ke Docker Hub → deploy SSH → GitHub Release.
+# Cuma dipanggil dari push tag `v*` atau workflow_dispatch, bukan dari setiap push.
+# Image di-scan SEBELUM di-push, jadi image yang ketahuan rentan gak pernah sampai registry.
+#
+# Pemanggil wajib: `secrets: inherit` dan `permissions: contents: write` (buat Release).
+# Secret yang dipakai: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, dan untuk deploy
+# SERVER_HOST, SERVER_USER, SERVER_KEY, SERVER_KNOWN_HOSTS (`ssh-keyscan <host>`).
+name: release-docker
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Nama image Docker Hub, mis. daffa09/vinci-diary-api
+        type: string
+        required: true
+      version:
+        description: Kosong = diambil dari tag (v1.2.3 → 1.2.3).
+        type: string
+        default: ''
+      context:
+        type: string
+        default: .
+      build-args:
+        description: Baris KEY=VALUE biasa (bukan rahasia).
+        type: string
+        default: ''
+      build-arg-secrets:
+        description: Nama secret (satu per baris) yang diteruskan sebagai build-arg dengan nama yang sama.
+        type: string
+        default: ''
+      trivy-severity:
+        type: string
+        default: HIGH,CRITICAL
+      deploy:
+        type: boolean
+        default: true
+      deploy-script:
+        description: Skrip yang dijalankan di server lewat SSH.
+        type: string
+        default: ''
+      deploy-group:
+        description: Kunci antrean deploy per server. Repo yang deploy ke server sama pakai nilai sama.
+        type: string
+        default: fantom
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: 🐳 Build, scan, push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Versi
+        id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          v="${INPUT_VERSION:-}"
+          if [ -z "$v" ] && [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; fi
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Versi '$v' gak valid. Push tag vX.Y.Z atau isi input version."
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Build args
+        id: args
+        env:
+          PLAIN: ${{ inputs.build-args }}
+          NAMES: ${{ inputs.build-arg-secrets }}
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo 'list<<__ARGS__'
+            echo "VERSION=$VERSION"
+            [ -n "$PLAIN" ] && printf '%s\n' "$PLAIN"
+            for n in $NAMES; do
+              val=$(jq -r --arg n "$n" '.[$n] // empty' <<<"$ALL_SECRETS")
+              [ -z "$val" ] && { echo "::error::Secret $n kosong/tidak ada"; exit 1; }
+              echo "$n=$val"
+            done
+            echo '__ARGS__'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: 🏗️ Build (lokal dulu, belum push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          load: true
+          provenance: false
+          tags: |
+            ${{ inputs.image }}:${{ steps.ver.outputs.version }}
+            ${{ inputs.image }}:latest
+          build-args: ${{ steps.args.outputs.list }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🕵️ Trivy image
+        env:
+          REF: ${{ inputs.image }}:${{ steps.ver.outputs.version }}
+          SEVERITY: ${{ inputs.trivy-severity }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.75.0 \
+            image --severity "$SEVERITY" --ignore-unfixed --exit-code 1 --no-progress "$REF"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 📤 Push
+        env:
+          IMAGE: ${{ inputs.image }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    name: 🚀 Deploy
+    needs: image
+    if: inputs.deploy && inputs.deploy-script != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-${{ inputs.deploy-group }}
+      cancel-in-progress: false
+    steps:
+      - name: SSH ke server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_KEY: ${{ secrets.SERVER_KEY }}
+          SERVER_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+          DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+          VERSION: ${{ needs.image.outputs.version }}
+        run: |
+          set -euo pipefail
+          for v in SERVER_HOST SERVER_USER SERVER_KEY SERVER_KNOWN_HOSTS; do
+            if [ -z "${!v}" ]; then echo "::error::Secret $v belum diset"; exit 1; fi
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$SERVER_KEY" > ~/.ssh/key && chmod 600 ~/.ssh/key
+          { echo "set -e"; echo "export VERSION='$VERSION'"; printf '%s\n' "$DEPLOY_SCRIPT"; } |
+            ssh -i ~/.ssh/key -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+              "$SERVER_USER@$SERVER_HOST" 'bash -s'
+
+  release:
+    name: 🏷️ GitHub Release
+    needs: [image, deploy]
+    if: ${{ !failure() && !cancelled() && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG sudah ada."
+          else
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag
+          fi

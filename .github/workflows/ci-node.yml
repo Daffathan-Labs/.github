@@ -1,0 +1,90 @@
+# CI untuk repo Node (NestJS / Next.js / script biasa).
+# Urutan: install → lint → typecheck → unit test → e2e (opsional) → build.
+# Semua langkah lewat `--if-present` atau deteksi file, jadi repo yang belum punya
+# salah satunya gak merah, cuma dilewati.
+name: ci-node
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        default: '22'
+      working-directory:
+        type: string
+        default: '.'
+      typecheck:
+        description: tsc --noEmit. Matikan untuk Next.js, `next build` sudah typecheck.
+        type: boolean
+        default: true
+      test-command:
+        type: string
+        default: npm test -- --ci
+      e2e:
+        description: Jalankan `npm run test:e2e` (cuma kalau e2e-nya gak butuh DB/service).
+        type: boolean
+        default: false
+      build:
+        type: boolean
+        default: true
+      env:
+        description: Baris KEY=VALUE tambahan (nilai dummy buat test, BUKAN secret asli).
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 🧪 Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Env tambahan
+        if: inputs.env != ''
+        env:
+          EXTRA_ENV: ${{ inputs.env }}
+        run: printf '%s\n' "$EXTRA_ENV" >> "$GITHUB_ENV"
+
+      - name: 📦 Install
+        run: npm ci --no-audit --no-fund
+
+      - name: 🧬 Prisma generate
+        if: hashFiles(format('{0}/prisma/schema.prisma', inputs.working-directory)) != ''
+        run: npx prisma generate
+
+      - name: 🧹 Lint
+        run: npm run lint --if-present
+
+      - name: 🔎 Typecheck
+        if: inputs.typecheck && hashFiles(format('{0}/tsconfig.json', inputs.working-directory)) != ''
+        run: |
+          if npm pkg get scripts.typecheck | grep -qv '{}'; then npm run typecheck; else npx tsc --noEmit; fi
+
+      - name: 🧪 Unit test
+        run: ${{ inputs.test-command }}
+
+      - name: 🧪 E2E test
+        if: inputs.e2e
+        run: npm run test:e2e --if-present
+
+      - name: 🏗️ Build
+        if: inputs.build
+        run: npm run build --if-present

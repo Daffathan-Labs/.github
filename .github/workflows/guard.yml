@@ -1,0 +1,41 @@
+# Gerbang murah yang jalan di setiap PR: cuma gitleaks di rentang commit yang masuk.
+# Test dan scan berat baru jalan kalau PR dikasih label `ci` atau sudah ke-merge,
+# biar menit GitHub Actions gak habis buat PR yang masih coret-coretan.
+name: guard
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: 🔐 Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          RANGE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          RANGE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          curl -sSfL --connect-timeout 15 --max-time 180 --retry 3 --retry-delay 5 \
+            -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          # Push pertama, tag, dan workflow_dispatch gak punya "before" yang valid:
+          # scan isi working tree aja, bukan seluruh history.
+          if [ -z "${RANGE_BASE:-}" ] || [ "$RANGE_BASE" = "0000000000000000000000000000000000000000" ]; then
+            /tmp/gitleaks detect --source . --no-git --redact --exit-code 1
+          else
+            /tmp/gitleaks detect --source . --redact --exit-code 1 \
+              --log-opts "--no-merges $RANGE_BASE..$RANGE_HEAD"
+          fi
