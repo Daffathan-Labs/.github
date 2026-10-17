@@ -1,0 +1,85 @@
+# Scan keamanan, satu job (tiap job ditagih minimal 1 menit, jadi digabung).
+#   - Trivy fs     : dependency rentan (npm/pip/go/pub), HIGH/CRITICAL yang sudah ada fix-nya.
+#   - Trivy config : salah konfigurasi Dockerfile / compose / k8s.
+#   - Semgrep OSS  : SAST. Mode diff (push/PR) cuma gagal untuk temuan BARU di rentang
+#                    commit itu, jadi kode lama gak bikin semua repo merah sekaligus.
+# Mode `full` (dipanggil dari jadwal mingguan) scan semua kode + bikin SBOM CycloneDX.
+# Pengecualian yang disengaja ditaruh di `.trivyignore` / `.semgrepignore` repo masing-masing,
+# lengkap dengan alasannya. Trivy jalan dengan workdir = root repo, jadi `.trivyignore`
+# kebaca otomatis kalau ada, dan gak bikin error kalau gak ada.
+name: security
+
+on:
+  workflow_call:
+    inputs:
+      full:
+        description: Scan penuh + SBOM (jadwal mingguan).
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.75.0
+  SEMGREP_IMAGE: semgrep/semgrep:1.180.0
+
+jobs:
+  scan:
+    name: 🕵️ Trivy + Semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ inputs.full && 1 || 0 }}
+          persist-credentials: false
+
+      - name: Cache DB Trivy
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ github.run_id }}
+          restore-keys: trivy-db-
+
+      - name: 🧬 Trivy fs (dependency)
+        if: ${{ !cancelled() }}
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress \
+            --skip-dirs node_modules,venv,.venv .
+
+      - name: 🐳 Trivy config (Dockerfile/compose)
+        if: ${{ !cancelled() }}
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs node_modules,venv,.venv .
+
+      - name: 🔬 Semgrep (SAST)
+        if: ${{ !cancelled() }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          FULL: ${{ inputs.full }}
+        run: |
+          set -euo pipefail
+          args="--config p/default --error --metrics=off --quiet"
+          if [ "$FULL" != true ] && [ -n "${BASE:-}" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] \
+             && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            args="$args --baseline-commit $BASE"
+          fi
+          docker run --rm -v "$PWD:/src" -w /src "$SEMGREP_IMAGE" sh -c \
+            "git config --global --add safe.directory /src && semgrep scan $args"
+
+      - name: 📋 SBOM (CycloneDX)
+        if: inputs.full && !cancelled()
+        run: |
+          docker run --rm -v "$PWD:/src" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            fs --format cyclonedx --output /src/sbom.cdx.json --no-progress --skip-dirs node_modules /src
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: inputs.full && !cancelled()
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90
+          if-no-files-found: ignore
