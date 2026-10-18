@@ -3,6 +3,7 @@
 #   - Trivy config : salah konfigurasi Dockerfile / compose / k8s.
 #   - Semgrep OSS  : SAST. Mode diff (push/PR) cuma gagal untuk temuan BARU di rentang
 #                    commit itu, jadi kode lama gak bikin semua repo merah sekaligus.
+#                    Tag rilis dibandingkan dengan tag sebelumnya; tanpa baseline = lapor saja.
 # Mode `full` (dipanggil dari jadwal mingguan) scan semua kode + bikin SBOM CycloneDX.
 # Pengecualian yang disengaja ditaruh di `.trivyignore` / `.semgrepignore` repo masing-masing,
 # lengkap dengan alasannya. Trivy jalan dengan workdir = root repo, jadi `.trivyignore`
@@ -62,10 +63,17 @@ jobs:
           FULL: ${{ inputs.full }}
         run: |
           set -euo pipefail
-          args="--config p/default --error --metrics=off --quiet"
-          if [ "$FULL" != true ] && [ -n "${BASE:-}" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] \
-             && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            args="$args --baseline-commit $BASE"
+          args="--config p/default --metrics=off --quiet"
+          # Tag/dispatch gak punya "before": bandingkan dengan tag rilis sebelumnya.
+          case "${BASE:-}" in ""|0000000000000000000000000000000000000000)
+            BASE=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true) ;;
+          esac
+          if [ "$FULL" != true ] && [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            args="$args --error --baseline-commit $BASE"
+          else
+            # Scan penuh (mingguan / rilis pertama) cuma melapor: kode lama sudah ada sebelum
+            # pipeline ini, dan kode baru sudah dijaga mode diff di tiap push/PR.
+            echo "::notice::Semgrep scan penuh, mode lapor (tanpa baseline)"
           fi
           docker run --rm -v "$PWD:/src" -w /src "$SEMGREP_IMAGE" sh -c \
             "git config --global --add safe.directory /src && semgrep scan $args"
