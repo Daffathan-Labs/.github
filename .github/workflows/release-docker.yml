@@ -120,8 +120,10 @@ jobs:
         env:
           REF: ${{ inputs.image }}:${{ steps.ver.outputs.version }}
           SEVERITY: ${{ inputs.trivy-severity }}
+        # Workdir = root repo, jadi `.trivyignore` repo (pengecualian + alasannya) ikut kebaca.
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.75.0 \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/src:ro" -w /src \
+            aquasec/trivy:0.75.0 \
             image --severity "$SEVERITY" --ignore-unfixed --exit-code 1 --no-progress "$REF"
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
